@@ -13,17 +13,17 @@ def addtodb(jsondata):
     
     
     conn = connecttodbandcreateifdoesntexist()
-    conn.execute("CREATE TABLE IF NOT EXISTS auction (title TEXT, location TEXT, odometer TEXT, colour TEXT, transmission TEXT, engine TEXT, body TEXT, fuel TEXT, wovr TEXT, stock TEXT, seller TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS auction (title TEXT, location TEXT, odometer TEXT, colour TEXT, transmission TEXT, engine TEXT, body TEXT, fuel TEXT, wovr TEXT, stock TEXT, seller TEXT, number_of_bids TEXT, bid_status TEXT, current_price TEXT)")
     # insert data into table
-    # Binding 1 has no name, but you supplied a dictionary (which has only names).
-    conn.executemany("INSERT INTO auction VALUES (:title, :location, :odometer, :colour, :transmission, :engine, :body, :fuel, :wovr, :stock, :seller)", jsondata)
+    
+    conn.executemany("INSERT INTO auction VALUES (:title, :location, :odometer, :colour, :transmission, :engine, :body, :fuel, :wovr, :stock, :seller,:number_of_bids,:bid_status,:current_price)", jsondata)
     # conn.executemany("INSERT INTO auction (title, location, odometer, colour, transmission, engine, body, fuel, wovr, stock, seller) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", jsondata)
     conn.commit()
     conn.close()
     
 def scrape_vehicle_data(soup):
     vehicle_data = []
-    vehiclecards = soup.find_all('div', class_='vehicle-card')
+    vehiclecards = soup.find_all('li', class_='vehicle-item')
     for vehiclecard in vehiclecards:
         data = {}
         data['title'] = vehiclecard.find('h2', class_='heading vehicle').text.strip() if vehiclecard.find('h2', class_='heading vehicle') else None
@@ -37,6 +37,22 @@ def scrape_vehicle_data(soup):
         data['wovr'] = vehiclecard.find('div', class_='WOVR').find('div', class_='value').text.strip() if vehiclecard.find('div', class_='WOVR') else None
         data['stock'] = vehiclecard.find('div', class_='stock').find('div', class_='value').text.strip() if vehiclecard.find('div', class_='stock') else None
         data['seller'] = vehiclecard.find('div', class_='seller').find('div', class_='value').text.strip() if vehiclecard.find('div', class_='seller') else None
+# we also need to get the number of bids and the current price
+#<div class="bidDetials"><span id="nrbids-6963313" class="bids">7</span> <span id="bidtxt-6963313" class="current-status">Current Bid</span> <span id="stprice-6963313" class="price">$1,575</span></div>
+        # we also need to get the number of bids and the current price
+        data['number_of_bids'] = None
+        data['bid_status'] = None
+        data['current_price'] = None
+        if vehiclecard:
+            bid_span = vehiclecard.find('span', class_='bids')
+            if bid_span:
+                data['number_of_bids'] = bid_span.text.strip()
+            bid_status = vehiclecard.find('span', class_='current-status')
+            if bid_status:
+                data['bid_status'] = bid_status.text.strip()
+            price_span = vehiclecard.find('span', class_='price')
+            if price_span:
+                data['current_price'] = price_span.text.strip()
 
         vehicle_data.append(data)
 
